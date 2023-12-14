@@ -1,6 +1,15 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"syncerland/initializers"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+func init() {
+	initializers.LoadEnvVariables()
+	initializers.ConnectToDB()
+}
 
 func main() {
 	app := fiber.New()
