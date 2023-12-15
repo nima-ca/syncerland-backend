@@ -5,23 +5,23 @@ import (
 )
 
 type APIResponse[T any] struct {
-	Status int   `json:"statusCode"`
-	Data   *T    `json:"data"` // Use a pointer to T to allow nil values
-	Err    error `json:"error"`
+	Status int      `json:"statusCode"`
+	Data   *T       `json:"data"` // Use a pointer to T to allow nil values
+	Errors []string `json:"errors"`
 }
 
-func NewAPIResponse[T any](statusCode int, data *T, err error) APIResponse[T] {
+func NewAPIResponse[T any](statusCode int, data *T, errors []string) APIResponse[T] {
 	return APIResponse[T]{
 		Status: statusCode,
 		Data:   data,
-		Err:    err,
+		Errors: errors,
 	}
 }
 
 func OkResponse[T any](data T) APIResponse[T] {
-	return NewAPIResponse[T](http.StatusOK, &data, nil)
+	return NewAPIResponse[T](http.StatusOK, &data, []string{})
 }
 
-func ErrorResponse[T any](statusCode int, err error) APIResponse[T] {
-	return NewAPIResponse[T](statusCode, nil, err)
+func ErrorResponse[T any](statusCode int, errors []string) APIResponse[T] {
+	return NewAPIResponse[T](statusCode, nil, errors)
 }
