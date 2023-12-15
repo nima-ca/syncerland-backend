@@ -1,7 +1,7 @@
 package main
 
 import (
-	"syncerland/initializers"
+	"syncerland/core/initializers"
 
 	"github.com/gofiber/fiber/v2"
 )
