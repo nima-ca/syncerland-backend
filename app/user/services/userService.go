@@ -1,12 +1,16 @@
 package services
 
 import (
+	"errors"
+	"fmt"
+	"math/rand"
 	"syncerland/app/user/dto"
 	"syncerland/core/initializers"
 	"syncerland/models"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func CreateUser(createUserDto dto.CreateUserDto) (*models.User, error) {
@@ -34,32 +38,42 @@ func CreateUser(createUserDto dto.CreateUserDto) (*models.User, error) {
 
 	// save user in DB
 	result := initializers.DB.Create(&user)
-
 	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &user, nil
+}
+
+func FindUserByEmail(email string) (*models.User, error) {
+	user := models.User{}
+	err := initializers.DB.Where("email = ?", email).First(&user).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-func FindUserByEmail(email string) *models.User {
+func FindUserById(id string) (*models.User, error) {
 	user := models.User{}
-	initializers.DB.Where("email = ?", email).First(&user)
+	err := initializers.DB.Where("email = ?", id).First(&user).Error
 
-	if user.ID == 0 {
-		return nil
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	return &user
+	return &user, nil
 }
 
-func FindUserById(id string) *models.User {
-	user := models.User{}
-	initializers.DB.Where("id = ?", id).First(&user)
-
-	if user.ID == 0 {
-		return nil
-	}
-
-	return &user
+func GenerateOTP() string {
+	otp := rand.Intn(900000) + 100000
+	return fmt.Sprint(otp)
 }
