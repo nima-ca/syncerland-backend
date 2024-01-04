@@ -10,6 +10,10 @@ type APIResponse[T any] struct {
 	Errors []string `json:"errors"`
 }
 
+type SuccessResponse struct {
+	Success bool `json:"success"`
+}
+
 func NewAPIResponse[T any](statusCode int, data *T, errors []string) APIResponse[T] {
 	return APIResponse[T]{
 		Status: statusCode,
