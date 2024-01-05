@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	emailService "syncerland/app/email/services"
 	"syncerland/app/jwt"
 	userDto "syncerland/app/user/dto"
 	userService "syncerland/app/user/services"
@@ -63,7 +64,8 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 		Otp:      otp,
 	})
 
-	// TODO: add send otp
+	// DOC: send OTP and not wait for the response
+	go emailService.SendOTP(body.Email, otp)
 
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
