@@ -8,7 +8,6 @@ import (
 	"syncerland/helpers"
 	"syncerland/packages/errors"
 	"syncerland/packages/validators"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -18,8 +17,6 @@ const (
 	UserAlreadyExistError   string = "User already Exist"
 	FailedToCreateUserError string = "Failed to create user"
 	InvalidEmailOrPassword  string = "Invalid Email or password"
-	AccessTokenCookieName   string = "jwt_access_token"
-	RefreshTokenCookieName  string = "jwt_refresh_token"
 )
 
 func RegisterHandler(ctx *fiber.Ctx) error {
@@ -120,41 +117,15 @@ func LoginHandler(ctx *fiber.Ctx) error {
 			))
 	}
 
-	accessTokenExpiration := time.Now().Add(time.Hour * 24 * 7) // 7 days
-	accessToken, accessTokenErr := jwt.GenerateToken(user.ID, accessTokenExpiration.Unix())
-	if accessTokenErr != nil {
+	accessToken, refreshToken, generateTokenErr := jwt.GenerateAccessAndRefreshTokens(user.ID)
+	if generateTokenErr != nil {
 		return ctx.Status(http.StatusInternalServerError).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
 				[]string{errors.InternalServerError},
 			))
 	}
 
-	refreshTokenExpiration := time.Now().Add(time.Hour * 24 * 30) // 30 days
-	refreshToken, refreshTokenErr := jwt.GenerateToken(user.ID, refreshTokenExpiration.Unix())
-	if refreshTokenErr != nil {
-		return ctx.Status(http.StatusInternalServerError).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerError},
-			))
-	}
-
-	ctx.Cookie(&fiber.Cookie{
-		Name:     AccessTokenCookieName,
-		Value:    accessToken,
-		Expires:  accessTokenExpiration,
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "Lax",
-	})
-
-	ctx.Cookie(&fiber.Cookie{
-		Name:     RefreshTokenCookieName,
-		Value:    refreshToken,
-		Expires:  refreshTokenExpiration,
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "Lax",
-	})
+	jwt.SetGeneratedTokensInCookie(ctx, accessToken, refreshToken)
 
 	return ctx.Status(http.StatusOK).
 		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))

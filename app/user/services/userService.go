@@ -61,7 +61,7 @@ func FindUserByEmail(email string) (*models.User, error) {
 
 func FindUserById(id string) (*models.User, error) {
 	user := models.User{}
-	err := initializers.DB.Where("email = ?", id).First(&user).Error
+	err := initializers.DB.Where("id = ?", id).First(&user).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

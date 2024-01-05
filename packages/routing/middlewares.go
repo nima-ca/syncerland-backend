@@ -19,7 +19,8 @@ func RegisterMiddlewares() {
 
 	// Add CORS policies
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3000", // TODO: change this to domain in production
+		AllowOrigins:     "http://localhost:3000", // TODO: change this to domain in production
+		AllowCredentials: true,
 	}))
 
 	// Logger Middleware
