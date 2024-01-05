@@ -64,6 +64,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 		Otp:      otp,
 	})
 
+	// DOC: send OTP and not wait for the response
 	go emailService.SendOTP(body.Email, otp)
 
 	if err != nil {
