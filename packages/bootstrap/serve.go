@@ -15,6 +15,7 @@ func Serve() {
 
 	// DOC: initialize the router (Fiber)
 	routing.Init()
+	routing.RegisterMiddlewares()
 	routing.RegisterRoutes()
 	routing.Serve(":" + port)
 }

@@ -10,4 +10,5 @@ func Register(router *fiber.App) {
 	userGroup := router.Group("/user")
 
 	userGroup.Post("/register", controller.RegisterHandler)
+	userGroup.Post("/login", controller.LoginHandler)
 }

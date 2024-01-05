@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"syncerland/app/jwt"
 	userDto "syncerland/app/user/dto"
 	userService "syncerland/app/user/services"
 	"syncerland/helpers"
@@ -39,7 +40,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 
 	user, userErr := userService.FindUserByEmail(body.Email)
 	if userErr != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
+		return ctx.Status(http.StatusInternalServerError).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
 				[]string{errors.InternalServerError},
 			))
@@ -116,7 +117,15 @@ func LoginHandler(ctx *fiber.Ctx) error {
 			))
 	}
 
-	// TODO: Generate ACCESS TOKEN AND REFRESH TOKEN AND SET IN COOKIE
+	accessToken, refreshToken, generateTokenErr := jwt.GenerateAccessAndRefreshTokens(user.ID)
+	if generateTokenErr != nil {
+		return ctx.Status(http.StatusInternalServerError).JSON(
+			helpers.ErrorResponse[any](http.StatusBadRequest,
+				[]string{errors.InternalServerError},
+			))
+	}
+
+	jwt.SetGeneratedTokensInCookie(ctx, accessToken, refreshToken)
 
 	return ctx.Status(http.StatusOK).
 		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
