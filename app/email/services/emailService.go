@@ -23,7 +23,7 @@ func SendOTP(to string, otp string) {
 	m := gomail.NewMessage()
 
 	// Add sender and receiver
-	m.SetHeader("From", "syncerland@gmail.com")
+	m.SetHeader("From", os.Getenv("SENDER_EMAIL"))
 	m.SetHeader("To", to)
 
 	// Add subject and body
