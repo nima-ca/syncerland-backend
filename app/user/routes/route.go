@@ -12,4 +12,5 @@ func Register(router *fiber.App) {
 	userGroup.Post("/register", controller.RegisterHandler)
 	userGroup.Post("/login", controller.LoginHandler)
 	userGroup.Post("/verify", controller.VerifyUserHandler)
+	userGroup.Post("/resendOTP", controller.ResendOTPHandler)
 }

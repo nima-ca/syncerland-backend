@@ -23,6 +23,10 @@ type VerifyHandlerBody struct {
 	Otp   string `json:"otp" validate:"required,len=6"`
 }
 
+type ResendOTPHandlerBody struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
 type LoginHandlerResponse struct {
 	Success bool `json:"success"`
 }
