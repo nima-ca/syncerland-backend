@@ -6,6 +6,7 @@ import (
 	"syncerland/app/jwt"
 	userDto "syncerland/app/user/dto"
 	userService "syncerland/app/user/services"
+	"syncerland/core/initializers"
 	"syncerland/helpers"
 	"syncerland/packages/errors"
 	"syncerland/packages/validators"
@@ -15,9 +16,13 @@ import (
 )
 
 const (
-	UserAlreadyExistError   string = "User already Exist"
-	FailedToCreateUserError string = "Failed to create user"
-	InvalidEmailOrPassword  string = "Invalid Email or password"
+	UserAlreadyExistErrorMsg       string = "User already Exist"
+	FailedToCreateUserErrorMsg     string = "Failed to create user"
+	InvalidEmailOrPasswordErrorMsg string = "Invalid email or password"
+	IncorrectEmailErrorMsg         string = "Incorrect email address"
+	IncorrectOTPErrorMsg           string = "Incorrect OTP"
+	OTPExpiredErrorMsg             string = "OTP expired"
+	UserAlreadyVerifiedErrorMsg    string = "User is already verified"
 )
 
 func RegisterHandler(ctx *fiber.Ctx) error {
@@ -27,7 +32,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 	if err := ctx.BodyParser(&body); err != nil {
 		return ctx.Status(http.StatusBadRequest).
 			JSON(helpers.ErrorResponse[any](http.StatusBadRequest, []string{
-				errors.FailedToParseBodyError,
+				errors.FailedToParseBodyErrorMsg,
 			}))
 	}
 
@@ -43,7 +48,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 	if userErr != nil {
 		return ctx.Status(http.StatusInternalServerError).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerError},
+				[]string{errors.InternalServerErrorErrorMsg},
 			))
 	}
 
@@ -51,7 +56,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 	if user != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{UserAlreadyExistError},
+				[]string{UserAlreadyExistErrorMsg},
 			))
 	}
 
@@ -70,7 +75,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{FailedToCreateUserError},
+				[]string{FailedToCreateUserErrorMsg},
 			))
 	}
 
@@ -84,7 +89,7 @@ func LoginHandler(ctx *fiber.Ctx) error {
 	if err := ctx.BodyParser(&body); err != nil {
 		return ctx.Status(http.StatusBadRequest).
 			JSON(helpers.ErrorResponse[any](http.StatusBadRequest, []string{
-				errors.FailedToParseBodyError,
+				errors.FailedToParseBodyErrorMsg,
 			}))
 	}
 
@@ -100,7 +105,7 @@ func LoginHandler(ctx *fiber.Ctx) error {
 	if userErr != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerError},
+				[]string{errors.InternalServerErrorErrorMsg},
 			))
 	}
 
@@ -108,14 +113,14 @@ func LoginHandler(ctx *fiber.Ctx) error {
 	if user == nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{InvalidEmailOrPassword},
+				[]string{InvalidEmailOrPasswordErrorMsg},
 			))
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{InvalidEmailOrPassword},
+				[]string{InvalidEmailOrPasswordErrorMsg},
 			))
 	}
 
@@ -123,11 +128,76 @@ func LoginHandler(ctx *fiber.Ctx) error {
 	if generateTokenErr != nil {
 		return ctx.Status(http.StatusInternalServerError).JSON(
 			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerError},
+				[]string{errors.InternalServerErrorErrorMsg},
 			))
 	}
 
 	jwt.SetGeneratedTokensInCookie(ctx, accessToken, refreshToken)
+
+	return ctx.Status(http.StatusOK).
+		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
+}
+
+func VerifyUserHandler(ctx *fiber.Ctx) error {
+	// Get Body of the Request
+	var body userDto.VerifyHandlerBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			errors.FailedToParseBodyErrorMsg)
+	}
+
+	// Validate Body of request
+	if errs := validators.Validate(body); len(errs) > 0 {
+		return ctx.Status(http.StatusBadRequest).JSON(
+			helpers.ErrorResponse[any](http.StatusBadRequest,
+				errors.GetValidationErrors(errs),
+			))
+	}
+
+	// Find the user
+	user, err := userService.FindUserByEmail(body.Email)
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
+
+	// Verify user exists
+	if user == nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			IncorrectEmailErrorMsg)
+	}
+
+	// Check if user is already verified
+	if user.IsVerified {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			UserAlreadyVerifiedErrorMsg)
+	}
+
+	// Verify that an OTP is sent to user
+	if user.Otp == "" {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			IncorrectEmailErrorMsg)
+	}
+
+	// Check if OTP is expired
+	if userService.IsOTPExpired(user.OtpSendTime) {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			OTPExpiredErrorMsg)
+	}
+
+	// Verify OTP
+	err = bcrypt.CompareHashAndPassword([]byte(user.Otp), []byte(body.Otp))
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			IncorrectOTPErrorMsg)
+	}
+
+	result := initializers.DB.Model(&user).Updates(map[string]interface{}{"otp": "", "is_verified": true})
+
+	if result.Error != nil || result.RowsAffected != 1 {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
 
 	return ctx.Status(http.StatusOK).
 		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
