@@ -33,7 +33,7 @@ func CreateUser(createUserDto dto.CreateUserDto) (*models.User, error) {
 		Password:    string(hashedPassword),
 		IsVerified:  false,
 		Otp:         string(hashedOtp),
-		OtpSendTime: time.Now(),
+		OtpSendTime: GetOTPExpireTime(),
 	}
 
 	// save user in DB
@@ -76,4 +76,12 @@ func FindUserById(id string) (*models.User, error) {
 func GenerateOTP() string {
 	otp := rand.Intn(900000) + 100000
 	return fmt.Sprint(otp)
+}
+
+func GetOTPExpireTime() time.Time {
+	return time.Now().Add(time.Minute * 2)
+}
+
+func IsOTPExpired(expireTime time.Time) bool {
+	return time.Now().After(expireTime)
 }

@@ -2,6 +2,8 @@ package helpers
 
 import (
 	"net/http"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type APIResponse[T any] struct {
@@ -28,4 +30,8 @@ func OkResponse[T any](data T) APIResponse[T] {
 
 func ErrorResponse[T any](statusCode int, errors []string) APIResponse[T] {
 	return NewAPIResponse[T](statusCode, nil, errors)
+}
+
+func SendErrorResponse(ctx *fiber.Ctx, statusCode int, messages ...string) error {
+	return ctx.Status(statusCode).JSON(ErrorResponse[any](statusCode, messages))
 }
