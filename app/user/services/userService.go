@@ -13,6 +13,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	OTPExpireTime time.Duration = time.Minute * 2
+)
+
 func CreateUser(createUserDto dto.CreateUserDto) (*models.User, error) {
 	// Hash the password before storing it
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(createUserDto.Password), 10)
@@ -28,12 +32,12 @@ func CreateUser(createUserDto dto.CreateUserDto) (*models.User, error) {
 
 	// create user
 	user := models.User{
-		Name:        createUserDto.Name,
-		Email:       createUserDto.Email,
-		Password:    string(hashedPassword),
-		IsVerified:  false,
-		Otp:         string(hashedOtp),
-		OtpSendTime: GetOTPExpireTime(),
+		Name:          createUserDto.Name,
+		Email:         createUserDto.Email,
+		Password:      string(hashedPassword),
+		IsVerified:    false,
+		Otp:           string(hashedOtp),
+		OtpExpireTime: GetOTPExpireTime(),
 	}
 
 	// save user in DB
@@ -79,9 +83,5 @@ func GenerateOTP() string {
 }
 
 func GetOTPExpireTime() time.Time {
-	return time.Now().Add(time.Minute * 2)
-}
-
-func IsOTPExpired(expireTime time.Time) bool {
-	return time.Now().After(expireTime)
+	return time.Now().Add(OTPExpireTime)
 }

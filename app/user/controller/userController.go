@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	emailService "syncerland/app/email/services"
 	"syncerland/app/jwt"
@@ -10,19 +11,20 @@ import (
 	"syncerland/helpers"
 	"syncerland/packages/errors"
 	"syncerland/packages/validators"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	UserAlreadyExistErrorMsg       string = "User already Exist"
+	UserAlreadyExistErrorMsg       string = "Email is already in use"
 	FailedToCreateUserErrorMsg     string = "Failed to create user"
 	InvalidEmailOrPasswordErrorMsg string = "Invalid email or password"
-	IncorrectEmailErrorMsg         string = "Incorrect email address"
-	IncorrectOTPErrorMsg           string = "Incorrect OTP"
-	OTPExpiredErrorMsg             string = "OTP expired"
-	UserAlreadyVerifiedErrorMsg    string = "User is already verified"
+	IncorrectEmailErrorMsg         string = "Please send a correct email address"
+	IncorrectOTPErrorMsg           string = "OTP is incorrect"
+	OTPExpiredErrorMsg             string = "OTP is expired"
+	UserAlreadyVerifiedErrorMsg    string = "You are already verified"
 )
 
 func RegisterHandler(ctx *fiber.Ctx) error {
@@ -150,7 +152,7 @@ func VerifyUserHandler(ctx *fiber.Ctx) error {
 	}
 
 	// Check if OTP is expired
-	if userService.IsOTPExpired(user.OtpSendTime) {
+	if time.Now().After(user.OtpExpireTime) {
 		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, OTPExpiredErrorMsg)
 	}
 
@@ -165,6 +167,66 @@ func VerifyUserHandler(ctx *fiber.Ctx) error {
 		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
 			errors.InternalServerErrorErrorMsg)
 	}
+
+	return ctx.Status(http.StatusOK).
+		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
+}
+
+func ResendOTPHandler(ctx *fiber.Ctx) error {
+	// Get Body of the Request
+	var body userDto.ResendOTPHandlerBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, errors.FailedToParseBodyErrorMsg)
+	}
+
+	// Validate Body of request
+	if errs := validators.Validate(body); len(errs) > 0 {
+		return ctx.Status(http.StatusBadRequest).JSON(
+			helpers.ErrorResponse[any](http.StatusBadRequest, errors.GetValidationErrors(errs)))
+	}
+
+	// Find the user
+	user, err := userService.FindUserByEmail(body.Email)
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
+
+	// Verify user exists
+	if user == nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, IncorrectEmailErrorMsg)
+	}
+
+	// Check if user is already verified
+	if user.IsVerified {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, UserAlreadyVerifiedErrorMsg)
+	}
+
+	if time.Now().Before(user.OtpExpireTime) {
+		diff := time.Until(user.OtpExpireTime)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
+			fmt.Sprintf("You should wait %d seconds for next otp", int(diff.Seconds())),
+		)
+	}
+
+	otp := userService.GenerateOTP()
+	// Hash the Otp before storing it
+	hashedOtp, err := bcrypt.GenerateFromPassword([]byte(otp), 10)
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
+
+	result := initializers.DB.Model(&user).Updates(map[string]interface{}{"otp": hashedOtp,
+		"otp_expire_time": userService.GetOTPExpireTime()})
+
+	if result.Error != nil || result.RowsAffected != 1 {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
+
+	// DOC: send OTP and not wait for the response
+	go emailService.SendOTP(body.Email, otp)
 
 	return ctx.Status(http.StatusOK).
 		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"syncerland/core/initializers"
 	"syncerland/models"
 )
@@ -21,4 +22,6 @@ func main() {
 		&models.Note{},
 		&models.Offer{},
 	)
+
+	fmt.Println("Migration was successful")
 }
