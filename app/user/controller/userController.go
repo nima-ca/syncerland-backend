@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	UserAlreadyExistErrorMsg       string = "User already Exist"
+	UserAlreadyExistErrorMsg       string = "Email is already in use"
 	FailedToCreateUserErrorMsg     string = "Failed to create user"
 	InvalidEmailOrPasswordErrorMsg string = "Invalid email or password"
-	IncorrectEmailErrorMsg         string = "Incorrect email address"
-	IncorrectOTPErrorMsg           string = "Incorrect OTP"
-	OTPExpiredErrorMsg             string = "OTP expired"
-	UserAlreadyVerifiedErrorMsg    string = "User is already verified"
+	IncorrectEmailErrorMsg         string = "Please send a correct email address"
+	IncorrectOTPErrorMsg           string = "OTP is incorrect"
+	OTPExpiredErrorMsg             string = "OTP is expired"
+	UserAlreadyVerifiedErrorMsg    string = "You are already verified"
 )
 
 func RegisterHandler(ctx *fiber.Ctx) error {
