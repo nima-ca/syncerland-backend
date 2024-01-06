@@ -30,10 +30,7 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 	// Get Body of the Request
 	var body userDto.RegisterHandlerBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return ctx.Status(http.StatusBadRequest).
-			JSON(helpers.ErrorResponse[any](http.StatusBadRequest, []string{
-				errors.FailedToParseBodyErrorMsg,
-			}))
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, errors.FailedToParseBodyErrorMsg)
 	}
 
 	// Validate Body of request
@@ -46,18 +43,13 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 
 	user, userErr := userService.FindUserByEmail(body.Email)
 	if userErr != nil {
-		return ctx.Status(http.StatusInternalServerError).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerErrorErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
 	}
 
 	// check if user exists
 	if user != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{UserAlreadyExistErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, UserAlreadyExistErrorMsg)
 	}
 
 	otp := userService.GenerateOTP()
@@ -69,15 +61,12 @@ func RegisterHandler(ctx *fiber.Ctx) error {
 		Otp:      otp,
 	})
 
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, FailedToCreateUserErrorMsg)
+	}
+
 	// DOC: send OTP and not wait for the response
 	go emailService.SendOTP(body.Email, otp)
-
-	if err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{FailedToCreateUserErrorMsg},
-			))
-	}
 
 	return ctx.Status(http.StatusOK).
 		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
@@ -87,10 +76,7 @@ func LoginHandler(ctx *fiber.Ctx) error {
 	// Get Body of the Request
 	var body userDto.LoginHandlerBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return ctx.Status(http.StatusBadRequest).
-			JSON(helpers.ErrorResponse[any](http.StatusBadRequest, []string{
-				errors.FailedToParseBodyErrorMsg,
-			}))
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, errors.FailedToParseBodyErrorMsg)
 	}
 
 	// Validate Body of request
@@ -103,33 +89,23 @@ func LoginHandler(ctx *fiber.Ctx) error {
 
 	user, userErr := userService.FindUserByEmail(body.Email)
 	if userErr != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerErrorErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
 	}
 
 	// check if user exists
 	if user == nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{InvalidEmailOrPasswordErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, InvalidEmailOrPasswordErrorMsg)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{InvalidEmailOrPasswordErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, InvalidEmailOrPasswordErrorMsg)
 	}
 
 	accessToken, refreshToken, generateTokenErr := jwt.GenerateAccessAndRefreshTokens(user.ID)
 	if generateTokenErr != nil {
-		return ctx.Status(http.StatusInternalServerError).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				[]string{errors.InternalServerErrorErrorMsg},
-			))
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
 	}
 
 	jwt.SetGeneratedTokensInCookie(ctx, accessToken, refreshToken)
@@ -142,16 +118,13 @@ func VerifyUserHandler(ctx *fiber.Ctx) error {
 	// Get Body of the Request
 	var body userDto.VerifyHandlerBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			errors.FailedToParseBodyErrorMsg)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, errors.FailedToParseBodyErrorMsg)
 	}
 
 	// Validate Body of request
 	if errs := validators.Validate(body); len(errs) > 0 {
 		return ctx.Status(http.StatusBadRequest).JSON(
-			helpers.ErrorResponse[any](http.StatusBadRequest,
-				errors.GetValidationErrors(errs),
-			))
+			helpers.ErrorResponse[any](http.StatusBadRequest, errors.GetValidationErrors(errs)))
 	}
 
 	// Find the user
@@ -163,33 +136,27 @@ func VerifyUserHandler(ctx *fiber.Ctx) error {
 
 	// Verify user exists
 	if user == nil {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			IncorrectEmailErrorMsg)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, IncorrectEmailErrorMsg)
 	}
 
 	// Check if user is already verified
 	if user.IsVerified {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			UserAlreadyVerifiedErrorMsg)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, UserAlreadyVerifiedErrorMsg)
 	}
 
 	// Verify that an OTP is sent to user
 	if user.Otp == "" {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			IncorrectEmailErrorMsg)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, IncorrectEmailErrorMsg)
 	}
 
 	// Check if OTP is expired
 	if userService.IsOTPExpired(user.OtpSendTime) {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			OTPExpiredErrorMsg)
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, OTPExpiredErrorMsg)
 	}
 
 	// Verify OTP
-	err = bcrypt.CompareHashAndPassword([]byte(user.Otp), []byte(body.Otp))
-	if err != nil {
-		return helpers.SendErrorResponse(ctx, http.StatusBadRequest,
-			IncorrectOTPErrorMsg)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Otp), []byte(body.Otp)); err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusBadRequest, IncorrectOTPErrorMsg)
 	}
 
 	result := initializers.DB.Model(&user).Updates(map[string]interface{}{"otp": "", "is_verified": true})
