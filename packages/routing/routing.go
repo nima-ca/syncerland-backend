@@ -1,6 +1,7 @@
 package routing
 
 import (
+	jobRoutes "syncerland/app/job/routes"
 	userRoutes "syncerland/app/user/routes"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,4 +22,5 @@ func RegisterRoutes() {
 	router := GetRouter()
 
 	userRoutes.Register(router)
+	jobRoutes.Register(router)
 }

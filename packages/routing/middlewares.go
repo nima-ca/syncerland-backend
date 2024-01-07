@@ -29,4 +29,5 @@ func RegisterMiddlewares() {
 		TimeFormat: "15:04:05 02-Jan-2006",
 		TimeZone:   "Asia/Tehran",
 	}))
+
 }
