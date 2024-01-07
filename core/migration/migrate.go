@@ -1,4 +1,4 @@
-package main
+package migration
 
 import (
 	"fmt"
@@ -6,12 +6,7 @@ import (
 	"syncerland/models"
 )
 
-func init() {
-	initializers.LoadEnvVariables()
-	initializers.ConnectToDB()
-}
-
-func main() {
+func MigrateDB() {
 	initializers.DB.AutoMigrate(
 		&models.User{},
 		&models.Application{},
