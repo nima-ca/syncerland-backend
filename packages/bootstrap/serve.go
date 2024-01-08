@@ -19,5 +19,6 @@ func Serve() {
 	routing.Init()
 	routing.RegisterMiddlewares()
 	routing.RegisterRoutes()
+
 	routing.Serve(":" + port)
 }

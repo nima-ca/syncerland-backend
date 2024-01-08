@@ -18,5 +18,7 @@ func MigrateDB() {
 		&models.Offer{},
 	)
 
+	SeedCountries()
+
 	fmt.Println("Migration was successful")
 }

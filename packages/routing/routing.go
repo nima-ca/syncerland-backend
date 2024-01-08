@@ -20,6 +20,7 @@ func GetRouter() *fiber.App {
 // DOC: it registers all the routes in different modules
 func RegisterRoutes() {
 	router := GetRouter()
+	router.Static("/static", "/public")
 
 	userRoutes.Register(router)
 	jobRoutes.Register(router)
