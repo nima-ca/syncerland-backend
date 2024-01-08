@@ -33,6 +33,8 @@ func GetValidationErrors(errors []validators.ValidationErrorResponse) []string {
 		case "len":
 			errorsSlice = append(errorsSlice, fmt.Sprintf("%s must have exactly %s characters.",
 				err.FailedField, err.Param))
+		case "datetime":
+			errorsSlice = append(errorsSlice, fmt.Sprintf("%s must be in valid format.", err.FailedField))
 		default:
 			// Use the default error message
 			errorsSlice = append(errorsSlice, fmt.Sprintf("Validation failed for field %s with tag %s.",

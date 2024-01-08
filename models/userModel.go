@@ -14,8 +14,8 @@ type User struct {
 	Password      string `gorm:"not null"`
 	Otp           string
 	IsVerified    bool      `gorm:"default:false"`
-	OtpExpireTime time.Time `gorm:"type:timestamptz"`
-	LastLogin     time.Time `gorm:"type:timestamptz"`
+	OtpExpireTime time.Time `gorm:"type:timestamptz;default:null"`
+	LastLogin     time.Time `gorm:"type:timestamptz;default:null"`
 
 	Jobs         []Job
 	Interviews   []Interview

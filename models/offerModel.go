@@ -28,7 +28,7 @@ type Offer struct {
 	BaseSalary string    `gorm:"not null"`
 	Benefits   string    `gorm:"type:text"`
 	Currency   Currency  `gorm:"type:varchar(5)"`
-	Deadline   time.Time `gorm:"type:timestamptz"`
+	Deadline   time.Time `gorm:"type:timestamptz;default:null"`
 
 	ApplicationID uint `gorm:"index"`
 	Application   Application

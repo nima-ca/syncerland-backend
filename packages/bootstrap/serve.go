@@ -5,6 +5,7 @@ import (
 	"syncerland/core/initializers"
 	"syncerland/core/migration"
 	"syncerland/packages/routing"
+	"syncerland/packages/validators"
 )
 
 func Serve() {
@@ -12,6 +13,8 @@ func Serve() {
 	initializers.LoadEnvVariables()
 	initializers.ConnectToDB()
 	migration.MigrateDB()
+
+	validators.RegisterValidators()
 
 	port := os.Getenv("PORT")
 

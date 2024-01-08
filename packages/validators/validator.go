@@ -1,8 +1,16 @@
 package validators
 
-import "github.com/go-playground/validator/v10"
+import (
+	"time"
+
+	"github.com/go-playground/validator/v10"
+)
 
 var validate = validator.New()
+
+func RegisterValidators() {
+	validate.RegisterValidation("dateformat", DateFormatValidation)
+}
 
 func Validate(data interface{}) []ValidationErrorResponse {
 	validationErrors := []ValidationErrorResponse{}
@@ -23,4 +31,12 @@ func Validate(data interface{}) []ValidationErrorResponse {
 	}
 
 	return validationErrors
+}
+
+func DateFormatValidation(fl validator.FieldLevel) bool {
+	dateStr := fl.Field().String()
+	layout := fl.Param()
+
+	_, err := time.Parse(layout, dateStr)
+	return err == nil
 }
