@@ -22,3 +22,18 @@ type CreateJobHandlerDto struct {
 	PostedDate     string `json:"postedDate" validate:"omitempty,dateformat=2006-01-02"`
 	Deadline       string `json:"deadline" validate:"omitempty,dateformat=2006-01-02"`
 }
+
+type CreateJobHandlerResponseDto struct {
+	ID uint `json:"id"`
+}
+
+type UpdateJobHandlerDto struct {
+	ID             uint   `json:"id" validate:"required,min=1"`
+	CompanyName    string `json:"companyName" validate:"omitempty,min=1,max=250"`
+	Title          string `json:"title" validate:"omitempty,min=1,max=250"`
+	Description    string `json:"description" validate:"omitempty,gte=0,lte=3000"`
+	EmploymentType uint8  `json:"employmentType" validate:"omitempty,min=1,max=6"`
+	CountryID      int    `json:"countryId" validate:"omitempty,min=1"`
+	PostedDate     string `json:"postedDate" validate:"omitempty,dateformat=2006-01-02"`
+	Deadline       string `json:"deadline" validate:"omitempty,dateformat=2006-01-02"`
+}

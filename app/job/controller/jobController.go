@@ -36,7 +36,7 @@ func CreateJobHandler(ctx *fiber.Ctx) error {
 	parsedDeadline, _ := time.Parse(layout, body.Deadline)
 	parsedPostedDate, _ := time.Parse(layout, body.PostedDate)
 
-	services.CreateJob(dto.CreateJobDto{
+	job, err := services.CreateJob(dto.CreateJobDto{
 		CompanyName:    body.CompanyName,
 		Title:          body.Title,
 		Description:    body.Description,
@@ -47,8 +47,15 @@ func CreateJobHandler(ctx *fiber.Ctx) error {
 		PostedDate:     parsedPostedDate,
 	})
 
+	if err != nil {
+		return helpers.SendErrorResponse(ctx, http.StatusInternalServerError,
+			errors.InternalServerErrorErrorMsg)
+	}
+
 	return ctx.Status(http.StatusOK).
-		JSON(helpers.OkResponse[helpers.SuccessResponse](helpers.SuccessResponse{Success: true}))
+		JSON(helpers.OkResponse[dto.CreateJobHandlerResponseDto](dto.CreateJobHandlerResponseDto{
+			ID: job.ID,
+		}))
 }
 
 func UpdateJobHandler(ctx *fiber.Ctx) error {
